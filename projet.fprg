@@ -1,0 +1,513 @@
+<?xml version="1.0"?>
+<flowgorithm fileversion="2.11">
+    <attributes>
+        <attribute name="name" value=""/>
+        <attribute name="authors" value="manon"/>
+        <attribute name="about" value=""/>
+        <attribute name="saved" value="2021-06-16 06:32:43 "/>
+        <attribute name="created" value="bWFub247TVNJOzIwMjEtMDYtMTU7IjAxOjE0OjMyICI7MTk1Mw=="/>
+        <attribute name="edited" value="bWFub247TVNJOzIwMjEtMDYtMTU7IjAxOjE2OjU1ICI7MTsyMDY4"/>
+        <attribute name="edited" value="TVZQIFBhdGF0ZUNoYXVkZTtERVNLVE9QLUM4QjQ4OEs7MjAyMS0wNi0xNjsiMDY6MzI6NDMgIjsxNzszODMz"/>
+    </attributes>
+    <function name="Main" type="None" variable="">
+        <parameters/>
+        <body>
+            <comment text="Flowgorithm ne me laissait pas cr&#233;er les variables suivantes &#224; cause de leur type.&#13;&#10;&#13;&#10;DS3231 Clock(SDA, SCL)&#13;&#10;Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver()&#13;&#10;#define MIN_PULSE_WIDTH 650&#13;&#10;#define MAX_PULSE_WIDTH 2350&#13;&#10;#define DEFAULT_PULSE_WIDTH 1500&#13;&#10;#define FREQUENCY 50&#13;&#10;LiquidCrystal_I2C lcd(0x27,2,1,0,4,5,6,7)&#13;&#10;"/>
+            <declare name="Ok_Button" type="Integer" array="False" size=""/>
+            <assign variable="OkButton" expression="53"/>
+            <declare name="Plus_Button" type="Integer" array="False" size=""/>
+            <assign variable="PlusButton" expression="52"/>
+            <declare name="heureAlarm" type="Integer" array="False" size=""/>
+            <declare name="minuteAlarm" type="Integer" array="False" size=""/>
+            <declare name="secondeAlarm" type="Integer" array="False" size=""/>
+            <assign variable="heureAlarm" expression="0"/>
+            <assign variable="minuteAlarm" expression="0"/>
+            <assign variable="secondeAlarm" expression="0"/>
+            <declare name="alarmIsOn" type="Boolean" array="False" size=""/>
+            <declare name="isPlaying" type="Boolean" array="False" size=""/>
+            <assign variable="alarmIsOn" expression="False"/>
+            <assign variable="isPlaying" expression="False"/>
+            <call expression="setup()"/>
+            <call expression="loop()"/>
+        </body>
+    </function>
+    <function name="activateSettingsMenu" type="None" variable="">
+        <parameters/>
+        <body>
+            <if expression="safeButtonRead(Ok_Button)">
+                <then>
+                    <call expression="lcd.clear()"/>
+                    <call expression="settingsSelector()"/>
+                </then>
+                <else/>
+            </if>
+        </body>
+    </function>
+    <function name="alarm" type="None" variable="">
+        <parameters/>
+        <body>
+            <if expression="!isShowTime()">
+                <then>
+                    <assign variable="isPlaying" expression="False"/>
+                </then>
+                <else>
+                    <comment text="Sinon si"/>
+                    <if expression="!isPlaying &amp;&amp; isShowTime() &amp;&amp; alarmIsOn">
+                        <then>
+                            <assign variable="isPlaying" expression="True"/>
+                            <call expression="lcd.clear()"/>
+                            <call expression="showMenu(&quot;C'est l'heure !&quot;)"/>
+                            <call expression="playSound()"/>
+                            <call expression="playSound()"/>
+                            <call expression="lcd.clear()"/>
+                        </then>
+                        <else/>
+                    </if>
+                </else>
+            </if>
+        </body>
+    </function>
+    <function name="alarmSettings" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="printTime(heureAlarm, minuteAlarm, secondeAlarm)"/>
+            <assign variable="heureAlarm" expression="setEntry(&quot;Heure&quot;, heureAlarm, 23, 0)"/>
+            <call expression="printTime(heureAlarm, minuteAlarm, secondeAlarm)"/>
+            <assign variable="minuteAlarm" expression="setEntry(&quot;Minutes&quot;, minuteAlarm,  59, 0)"/>
+            <call expression="printTime(heureAlarm, minuteAlarm, secondeAlarm)"/>
+            <assign variable="secondeAlarm" expression="setEntry(&quot;Secondes&quot;, secondeAlarm, 59, 0)"/>
+            <assign variable="alarmIsOn" expression="True"/>
+        </body>
+    </function>
+    <function name="buttonsSetup" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="pinMode(Ok_Button, INPUT)"/>
+            <call expression="pinMode(Plus_Button, INPUT)"/>
+        </body>
+    </function>
+    <function name="calculNbJour" type="None" variable="">
+        <parameters>
+            <parameter name="mois" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <comment text="Flowgorithm ne permettant pas de faire des switch case, je l'ai fait ici avec des if"/>
+            <if expression="mois == 2">
+                <then>
+                    <assign variable="return" expression="29"/>
+                </then>
+                <else>
+                    <if expression="(mois == 4) || (mois == 6) || (mois == 9) || (mois == 11)">
+                        <then>
+                            <assign variable="return" expression="30"/>
+                        </then>
+                        <else>
+                            <assign variable="return" expression="31"/>
+                        </else>
+                    </if>
+                </else>
+            </if>
+        </body>
+    </function>
+    <function name="catchButtons" type="Integer" variable="menuChoice">
+        <parameters/>
+        <body>
+            <declare name="menuChoice" type="Integer" array="False" size=""/>
+            <assign variable="menuChoice" expression="0"/>
+            <declare name="isMenuChanging" type="Boolean" array="False" size=""/>
+            <assign variable="isMenuChanging" expression="true"/>
+            <declare name="isOkPressed" type="Boolean" array="False" size=""/>
+            <assign variable="isOkPressed" expression="false"/>
+            <declare name="menuLastChoice" type="Integer" array="False" size=""/>
+            <assign variable="menuLastChoice" expression="3"/>
+            <while expression="!isOkPressed">
+                <if expression="safeButtonRead(Plus_Button)">
+                    <then>
+                        <if expression="menuChoice &lt; menuLastChoice">
+                            <then>
+                                <assign variable="menuChoice" expression="menuChoice + 1"/>
+                            </then>
+                            <else>
+                                <if expression="menuChoice == menuLastChoice">
+                                    <then>
+                                        <assign variable="menuChoice" expression="0"/>
+                                    </then>
+                                    <else/>
+                                </if>
+                            </else>
+                        </if>
+                        <assign variable="isMenuChanging" expression="true"/>
+                    </then>
+                    <else/>
+                </if>
+                <if expression="safeButtonRead(Ok_Button)">
+                    <then>
+                        <assign variable="isOkPressed" expression="true"/>
+                    </then>
+                    <else/>
+                </if>
+                <if expression="isMenuChanging">
+                    <then>
+                        <call expression="lcd.clear()"/>
+                        <if expression="menuChoice==0">
+                            <then>
+                                <call expression="showMenu(&quot;Setup Alarm ?&quot;)"/>
+                            </then>
+                            <else/>
+                        </if>
+                        <if expression="menuChoice==1">
+                            <then>
+                                <call expression="showMenu(&quot;Setup Alarm ?&quot;)"/>
+                            </then>
+                            <else/>
+                        </if>
+                        <if expression="menuChoice==2 &amp;&amp; alarmIsOn">
+                            <then>
+                                <call expression="showMenu(&quot;Deactivate Alarm&quot;)"/>
+                            </then>
+                            <else/>
+                        </if>
+                        <if expression="menuChoice==2 &amp;&amp; !alarmIsOn">
+                            <then>
+                                <call expression="showMenu(&quot;Activate Alarm&quot;)"/>
+                            </then>
+                            <else/>
+                        </if>
+                        <if expression="menuChoice==3">
+                            <then>
+                                <call expression="showMenu(&quot;return...&quot;)"/>
+                            </then>
+                            <else/>
+                        </if>
+                        <assign variable="isMenuChanging" expression="false"/>
+                    </then>
+                    <else/>
+                </if>
+            </while>
+        </body>
+    </function>
+    <function name="clockSettings" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="annee" type="Integer" array="False" size=""/>
+            <assign variable="annee" expression="2010"/>
+            <declare name="mois" type="Integer" array="False" size=""/>
+            <assign variable="mois" expression="1"/>
+            <declare name="jour" type="Integer" array="False" size=""/>
+            <assign variable="jour" expression="1"/>
+            <declare name="heure" type="Integer" array="False" size=""/>
+            <assign variable="heure" expression="0"/>
+            <declare name="minute" type="Integer" array="False" size=""/>
+            <assign variable="minute" expression="0"/>
+            <declare name="seconde" type="Integer" array="False" size=""/>
+            <assign variable="seconde" expression="0"/>
+            <assign variable="annee" expression="setEntry(&quot;Annee&quot;, annee, 2040, 2010)"/>
+            <call expression="printTimeDate(annee, mois, jour, heure, minute, seconde)"/>
+            <assign variable="mois" expression="setEntry(&quot;Mois&quot;, mois, 12, 1)"/>
+            <call expression="printTimeDate(annee, mois, jour, heure, minute, seconde)"/>
+            <assign variable="jour" expression="setEntry(&quot;Jour&quot;, jour, calculNbJour(mois), 1)"/>
+            <call expression="printTimeDate(annee, mois, jour, heure, minute, seconde)"/>
+            <assign variable="heure" expression="setEntry(&quot;Heure&quot;, heure, 23, 0)"/>
+            <call expression="printTimeDate(annee, mois, jour, heure, minute, seconde)"/>
+            <assign variable="minute" expression="setEntry(&quot;Minutes&quot;, minute,  59, 0)"/>
+            <call expression="printTimeDate(annee, mois, jour, heure, minute, seconde)"/>
+            <assign variable="seconde" expression="setEntry(&quot;Secondes&quot;, seconde, 59, 0)"/>
+            <call expression="Clock.setTime(heure, minute, seconde)"/>
+            <call expression="Clock.setDate(jour, mois, annee)"/>
+        </body>
+    </function>
+    <function name="clockSetup" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="Clock.begin()"/>
+            <call expression="Clock.setTime(0, 0, 0)"/>
+            <call expression="Clock.setDate(1, 1, 2020)"/>
+        </body>
+    </function>
+    <function name="hit" type="None" variable="">
+        <parameters>
+            <parameter name="bell" type="Integer" array="False"/>
+            <parameter name="wait" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <call expression="pwm.setPWM(bell, 1, pulseWidth(70))"/>
+            <call expression="delay(100)"/>
+            <call expression="pwm.setPWM(bell, 1, pulseWidth(0))"/>
+            <if expression="wait &lt; 100">
+                <then>
+                    <assign variable="wait" expression="100"/>
+                </then>
+                <else/>
+            </if>
+            <call expression="delay(wait-100)"/>
+        </body>
+    </function>
+    <function name="isShowTime" type="Boolean" variable="result">
+        <parameters/>
+        <body>
+            <declare name="result" type="Boolean" array="False" size=""/>
+            <assign variable="result" expression="Clock.getTime().hour == heureAlarm &amp;&amp; Clock.getTime().min == minuteAlarm &amp;&amp; Clock.getTime().sec == secondeAlarm"/>
+        </body>
+    </function>
+    <function name="lcdSetup" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="lcd.begin(20,4)"/>
+            <call expression="lcd.setBacklightPin(3,POSITIVE)"/>
+            <call expression="lcd.setBacklight(HIGH)"/>
+            <call expression="lcd.setCursor(0,1)"/>
+        </body>
+    </function>
+    <function name="loop" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="ShowClockOnLCD()"/>
+            <call expression="activateSettingsMenu()"/>
+            <call expression="alarm()"/>
+        </body>
+    </function>
+    <function name="playSound" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="hit(0, 400)"/>
+            <call expression="hit(2, 400)"/>
+            <call expression="hit(4, 600)"/>
+            <call expression="hit(5, 600)"/>
+            <call expression="hit(3, 400)"/>
+            <call expression="hit(4, 800)"/>
+            <call expression="hit(0, 400)"/>
+            <call expression="hit(2, 400)"/>
+            <call expression="hit(4, 600)"/>
+            <call expression="hit(3, 400)"/>
+            <call expression="hit(2, 400)"/>
+            <call expression="hit(0, 400)"/>
+            <call expression="hit(1, 400)"/>
+        </body>
+    </function>
+    <function name="printAlarm" type="None" variable="">
+        <parameters>
+            <parameter name="heure" type="Integer" array="False"/>
+            <parameter name="minute" type="Integer" array="False"/>
+            <parameter name="seconde" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <call expression="lcd.setCursor(3,3)"/>
+            <call expression="lcd.print(&quot;alarm :&quot;)"/>
+            <call expression="lcd.print(heure)"/>
+            <call expression="lcd.print(&quot;:&quot;)"/>
+            <call expression="lcd.print(minute)"/>
+            <call expression="lcd.print(&quot;:&quot;)"/>
+            <call expression="lcd.print(seconde)"/>
+        </body>
+    </function>
+    <function name="printDate" type="None" variable="">
+        <parameters>
+            <parameter name="annee" type="Integer" array="False"/>
+            <parameter name="mois" type="Integer" array="False"/>
+            <parameter name="jour" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <call expression="lcd.setCursor(0,1)"/>
+            <call expression="lcd.print(&quot;Date : &quot;)"/>
+            <call expression="lcd.print(annee)"/>
+            <call expression="lcd.print(&quot;:&quot;)"/>
+            <call expression="lcd.print(mois)"/>
+            <call expression="lcd.print(&quot;:&quot;)"/>
+            <call expression="lcd.print(jour)"/>
+        </body>
+    </function>
+    <function name="printTime" type="None" variable="">
+        <parameters>
+            <parameter name="heure" type="Integer" array="False"/>
+            <parameter name="minute" type="Integer" array="False"/>
+            <parameter name="seconde" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <call expression="lcd.setCursor(0,0)"/>
+            <call expression="lcd.print(&quot;Time : &quot;)"/>
+            <call expression="lcd.print(heure)"/>
+            <call expression="lcd.print(&quot;:&quot;)"/>
+            <call expression="lcd.print(minute)"/>
+            <call expression="lcd.print(&quot;:&quot;)"/>
+            <call expression="lcd.print(seconde)"/>
+        </body>
+    </function>
+    <function name="printTimeDate" type="None" variable="">
+        <parameters>
+            <parameter name="annee" type="Integer" array="False"/>
+            <parameter name="mois" type="Integer" array="False"/>
+            <parameter name="jour" type="Integer" array="False"/>
+            <parameter name="heure" type="Integer" array="False"/>
+            <parameter name="minute" type="Integer" array="False"/>
+            <parameter name="seconde" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <call expression="lcd.Clear()"/>
+            <call expression="printDate(annee, mois, jour)"/>
+            <call expression="printTime(heure, minute, seconde)"/>
+        </body>
+    </function>
+    <function name="pulseWidth" type="Integer" variable="analog_value">
+        <parameters>
+            <parameter name="angle" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <declare name="analog_value" type="Integer" array="False" size=""/>
+            <declare name="pulse_wide" type="Integer" array="False" size=""/>
+            <assign variable="pulse_wide" expression="map(angle, 0, 180, MIN_PULSE_WIDTH, MAX_PULSE_WIDTH)"/>
+            <assign variable="analog_value" expression="int(float(pulse_wide) / 1000000 * FREQUENCY * 4096)"/>
+        </body>
+    </function>
+    <function name="resetLine" type="None" variable="">
+        <parameters>
+            <parameter name="line" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <call expression="lcd.setCursor(0,line)"/>
+            <call expression="lcd.print(&quot;                    &quot;)"/>
+        </body>
+    </function>
+    <function name="safeButtonRead" type="Boolean" variable="return">
+        <parameters>
+            <parameter name="button" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <if expression="digitalRead(button) == LOW">
+                <then>
+                    <do expression="(digitalRead(button) == LOW)">
+                        <call expression="delay(5)"/>
+                    </do>
+                    <assign variable="return" expression="true"/>
+                </then>
+                <else>
+                    <assign variable="return" expression="false"/>
+                </else>
+            </if>
+        </body>
+    </function>
+    <function name="servoSetup" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="pwm.begin()"/>
+            <call expression="pwm.setPWMFreq(FREQUENCY)"/>
+        </body>
+    </function>
+    <function name="setEntry" type="Integer" variable="value">
+        <parameters>
+            <parameter name="entry" type="String" array="False"/>
+            <parameter name="value" type="Integer" array="False"/>
+            <parameter name="valueMax" type="Integer" array="False"/>
+            <parameter name="valueMin" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <declare name="isValueSetUp" type="Boolean" array="False" size=""/>
+            <assign variable="isValueSetUp" expression="false"/>
+            <call expression="showEntry(entry, value)"/>
+            <while expression="!isValueSetup">
+                <if expression="safeButtonRead(Plus_Button)">
+                    <then>
+                        <if expression="value &lt; valueMax">
+                            <then>
+                                <assign variable="value" expression="value + 1"/>
+                            </then>
+                            <else>
+                                <if expression="value == valueMax">
+                                    <then>
+                                        <assign variable="value" expression="valueMin"/>
+                                        <call expression="resetLine(2)"/>
+                                        <call expression="showEntry(entry, value)"/>
+                                    </then>
+                                    <else/>
+                                </if>
+                            </else>
+                        </if>
+                    </then>
+                    <else/>
+                </if>
+                <if expression="safeButtonRead(Ok_Button)">
+                    <then>
+                        <assign variable="isValueSetUp" expression="True"/>
+                    </then>
+                    <else/>
+                </if>
+            </while>
+        </body>
+    </function>
+    <function name="settingsSelector" type="None" variable="">
+        <parameters/>
+        <body>
+            <declare name="menuChoice" type="Integer" array="False" size=""/>
+            <assign variable="menuChoice" expression="catchButtons()"/>
+            <if expression="menuChoice==1">
+                <then>
+                    <call expression="clockSettings()"/>
+                </then>
+                <else/>
+            </if>
+            <if expression="menuChoice==0">
+                <then>
+                    <call expression="alarmSettings()"/>
+                </then>
+                <else/>
+            </if>
+            <if expression="menuChoice==2">
+                <then>
+                    <assign variable="alarmIsOn" expression="!alarmIsOn"/>
+                </then>
+                <else/>
+            </if>
+            <call expression="lcd.clear()"/>
+        </body>
+    </function>
+    <function name="setup" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="Wire.begin()"/>
+            <call expression="lcdSetup()"/>
+            <call expression="clockSetup()"/>
+            <call expression="servoSetup()&#13;&#10;"/>
+            <call expression="buttonSetup()"/>
+            <call expression="showMenu(&quot;Initialisation...&quot;)"/>
+            <call expression="playSound()"/>
+            <call expression="lcd.Clear()"/>
+        </body>
+    </function>
+    <function name="showClockOnLCD" type="None" variable="">
+        <parameters/>
+        <body>
+            <call expression="lcd.setCursor(0,0)"/>
+            <call expression="lcd.print(&quot;Time : &quot;)"/>
+            <call expression="lcd.print(Clock.getTimeStr())"/>
+            <call expression="lcd.setCursor(0,1)"/>
+            <call expression="lcd.print(&quot;Date : &quot;)"/>
+            <call expression="lcd.print(Clock.getDateStr())"/>
+            <if expression="alarmIsOn">
+                <then>
+                    <call expression="printAlarm(heureAlarm, minuteAlarm, secondeAlarm)"/>
+                </then>
+                <else/>
+            </if>
+        </body>
+    </function>
+    <function name="showEntry" type="None" variable="">
+        <parameters>
+            <parameter name="entry" type="String" array="False"/>
+            <parameter name="value" type="Integer" array="False"/>
+        </parameters>
+        <body>
+            <call expression="lcd.setCursor(0,2)"/>
+            <call expression="lcd.print(entry)"/>
+            <call expression="lcd.print(&quot; : &quot;)"/>
+            <call expression="lcd.print(value)"/>
+        </body>
+    </function>
+    <function name="showMenu" type="None" variable="">
+        <parameters>
+            <parameter name="value" type="String" array="False"/>
+        </parameters>
+        <body>
+            <call expression="lcd.setCursor(0,0)"/>
+            <call expression="lcd.print(value)"/>
+        </body>
+    </function>
+</flowgorithm>
